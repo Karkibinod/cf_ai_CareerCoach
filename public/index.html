@@ -1,0 +1,1164 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>AI Career Coach</title>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+				min-height: 100vh;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				padding: 20px;
+			}
+
+			.container {
+				background: white;
+				border-radius: 20px;
+				box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+				width: 100%;
+				max-width: 900px;
+				height: 90vh;
+				display: flex;
+				flex-direction: column;
+				overflow: hidden;
+			}
+
+			.header {
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+				color: white;
+				padding: 20px;
+				text-align: center;
+			}
+
+			.header h1 {
+				font-size: 24px;
+				margin-bottom: 5px;
+			}
+
+			.header p {
+				opacity: 0.9;
+				font-size: 14px;
+			}
+
+			.tabs {
+				display: flex;
+				background: #f0f0f0;
+				border-bottom: 2px solid #e0e0e0;
+			}
+
+			.tab {
+				flex: 1;
+				padding: 15px;
+				text-align: center;
+				cursor: pointer;
+				background: transparent;
+				border: none;
+				font-size: 16px;
+				font-weight: 600;
+				color: #666;
+				transition: all 0.3s;
+			}
+
+			.tab.active {
+				background: white;
+				color: #667eea;
+				border-bottom: 3px solid #667eea;
+			}
+
+			.tab:hover {
+				background: #f8f8f8;
+			}
+
+			.tab-content {
+				display: none;
+				flex: 1;
+				overflow: hidden;
+				flex-direction: column;
+			}
+
+			.tab-content.active {
+				display: flex;
+			}
+
+			.chat-container, .resume-container {
+				flex: 1;
+				overflow-y: auto;
+				padding: 20px;
+				background: #f8f9fa;
+			}
+
+			.message {
+				margin-bottom: 15px;
+				display: flex;
+				align-items: flex-start;
+				animation: fadeIn 0.3s ease-in;
+			}
+
+			@keyframes fadeIn {
+				from {
+					opacity: 0;
+					transform: translateY(10px);
+				}
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+
+			.message.user {
+				justify-content: flex-end;
+			}
+
+			.message-content {
+				max-width: 70%;
+				padding: 12px 16px;
+				border-radius: 18px;
+				word-wrap: break-word;
+				line-height: 1.5;
+			}
+
+			.message.user .message-content {
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+				color: white;
+				border-bottom-right-radius: 4px;
+			}
+
+			.message.assistant .message-content {
+				background: white;
+				color: #333;
+				border-bottom-left-radius: 4px;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			}
+
+			.message.system .message-content {
+				background: #e3f2fd;
+				color: #1976d2;
+				font-style: italic;
+				font-size: 12px;
+				padding: 8px 12px;
+			}
+
+			.input-container {
+				padding: 20px;
+				background: white;
+				border-top: 1px solid #e0e0e0;
+				display: flex;
+				gap: 10px;
+			}
+
+			.input-container input {
+				flex: 1;
+				padding: 12px 16px;
+				border: 2px solid #e0e0e0;
+				border-radius: 25px;
+				font-size: 14px;
+				outline: none;
+				transition: border-color 0.3s;
+			}
+
+			.input-container input:focus {
+				border-color: #667eea;
+			}
+
+			.input-container button {
+				padding: 12px 24px;
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+				color: white;
+				border: none;
+				border-radius: 25px;
+				cursor: pointer;
+				font-weight: 600;
+				transition: transform 0.2s, box-shadow 0.2s;
+			}
+
+			.input-container button:hover:not(:disabled) {
+				transform: translateY(-2px);
+				box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+			}
+
+			.input-container button:disabled {
+				opacity: 0.6;
+				cursor: not-allowed;
+			}
+
+			.loading {
+				display: inline-block;
+				width: 20px;
+				height: 20px;
+				border: 3px solid rgba(255, 255, 255, 0.3);
+				border-radius: 50%;
+				border-top-color: white;
+				animation: spin 0.8s linear infinite;
+			}
+
+			@keyframes spin {
+				to {
+					transform: rotate(360deg);
+				}
+			}
+
+			.clear-btn {
+				background: #ff6b6b;
+				margin-left: 10px;
+			}
+
+			.clear-btn:hover:not(:disabled) {
+				box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+			}
+
+			/* Resume Scanner Styles */
+			.resume-upload-area {
+				border: 2px dashed #667eea;
+				border-radius: 12px;
+				padding: 40px;
+				text-align: center;
+				background: #f8f9ff;
+				margin-bottom: 20px;
+				cursor: pointer;
+				transition: all 0.3s;
+			}
+
+			.resume-upload-area:hover {
+				background: #f0f2ff;
+				border-color: #764ba2;
+			}
+
+			.resume-upload-area.dragover {
+				background: #e8ebff;
+				border-color: #764ba2;
+			}
+
+			.resume-upload-icon {
+				font-size: 48px;
+				margin-bottom: 10px;
+			}
+
+			.resume-textarea {
+				width: 100%;
+				min-height: 200px;
+				padding: 15px;
+				border: 2px solid #e0e0e0;
+				border-radius: 12px;
+				font-size: 14px;
+				font-family: inherit;
+				resize: vertical;
+				margin-bottom: 15px;
+			}
+
+			.resume-textarea:focus {
+				outline: none;
+				border-color: #667eea;
+			}
+
+			.resume-feedback {
+				background: white;
+				padding: 20px;
+				border-radius: 12px;
+				margin-top: 20px;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+				white-space: pre-wrap;
+				line-height: 1.6;
+			}
+
+			.ats-score-card {
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+				color: white;
+				padding: 20px;
+				border-radius: 12px;
+				margin-bottom: 20px;
+				text-align: center;
+			}
+
+			.ats-score {
+				font-size: 48px;
+				font-weight: bold;
+				margin: 10px 0;
+			}
+
+			.ats-ranking {
+				font-size: 20px;
+				margin-bottom: 10px;
+				opacity: 0.95;
+			}
+
+			.ats-details {
+				background: rgba(255, 255, 255, 0.2);
+				padding: 15px;
+				border-radius: 8px;
+				margin-top: 15px;
+				text-align: left;
+			}
+
+			.ats-details h4 {
+				margin-bottom: 10px;
+				font-size: 16px;
+			}
+
+			.ats-details ul {
+				list-style: none;
+				padding: 0;
+			}
+
+			.ats-details li {
+				padding: 5px 0;
+				font-size: 14px;
+			}
+
+			.ats-details li:before {
+				content: "✓ ";
+				margin-right: 5px;
+			}
+
+			.keywords-section {
+				display: flex;
+				gap: 15px;
+				margin-top: 10px;
+			}
+
+			.keywords-found, .keywords-missing {
+				flex: 1;
+			}
+
+			.keywords-found li:before {
+				content: "✓ ";
+				color: #4caf50;
+			}
+
+			.keywords-missing li:before {
+				content: "✗ ";
+				color: #ff6b6b;
+			}
+
+			.file-input {
+				display: none;
+			}
+
+			.upload-btn {
+				width: 100%;
+				padding: 15px;
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+				color: white;
+				border: none;
+				border-radius: 12px;
+				font-size: 16px;
+				font-weight: 600;
+				cursor: pointer;
+				margin-top: 10px;
+			}
+
+			.upload-btn:hover:not(:disabled) {
+				transform: translateY(-2px);
+				box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+			}
+
+			.upload-btn:disabled {
+				opacity: 0.6;
+				cursor: not-allowed;
+			}
+
+			.export-btn {
+				background: #4caf50;
+				margin-top: 15px;
+				padding: 12px 24px;
+			}
+
+			.export-btn:hover:not(:disabled) {
+				box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div class="header">
+				<h1>🤖 AI Career Coach</h1>
+				<p>Your personal career guidance assistant powered by AI</p>
+			</div>
+			<div class="tabs">
+				<button class="tab active" data-tab="chat">💬 Chat</button>
+				<button class="tab" data-tab="resume">📄 Resume Scanner</button>
+				<button class="tab" data-tab="courses">🎓 Course Recommendations</button>
+			</div>
+
+			<!-- Chat Tab -->
+			<div class="tab-content active" id="chatTab">
+				<div class="chat-container" id="chatContainer">
+					<div class="message system">
+						<div class="message-content">
+							Welcome! I'm your AI Career Coach. I can help you with career decisions, job search strategies, professional development, and more. How can I assist you today?
+						</div>
+					</div>
+				</div>
+				<div class="input-container">
+					<input
+						type="text"
+						id="messageInput"
+						placeholder="Ask me anything about your career..."
+						autocomplete="off"
+					/>
+					<button id="sendButton">Send</button>
+					<button id="clearButton" class="clear-btn">Clear</button>
+				</div>
+			</div>
+
+			<!-- Resume Scanner Tab -->
+			<div class="tab-content" id="resumeTab">
+				<div class="resume-container">
+					<div class="resume-upload-area" id="uploadArea">
+						<div class="resume-upload-icon">📄</div>
+						<h3>Upload Your Resume</h3>
+						<p>Drag and drop your resume file here, or click to browse</p>
+						<p style="font-size: 12px; color: #666; margin-top: 10px;">
+							Supports: .txt and .pdf files
+						</p>
+						<input type="file" id="fileInput" class="file-input" accept=".txt,.pdf,.text/plain,application/pdf">
+					</div>
+					<div>
+						<label for="resumeText" style="display: block; margin-bottom: 10px; font-weight: 600;">
+							Or paste your resume text here:
+						</label>
+						<textarea
+							id="resumeText"
+							class="resume-textarea"
+							placeholder="Or paste your resume content here directly..."
+						></textarea>
+					</div>
+					<button id="scanButton" class="upload-btn">🔍 Analyze Resume</button>
+					<div id="resumeFeedback" class="resume-feedback" style="display: none;"></div>
+				</div>
+			</div>
+
+			<!-- Course Recommendations Tab -->
+			<div class="tab-content" id="coursesTab">
+				<div class="resume-container">
+					<div style="text-align: center; margin-bottom: 30px;">
+						<h2 style="color: #667eea; margin-bottom: 10px;">🎓 Course & Certification Recommendations</h2>
+						<p style="color: #666;">Enter your job title to get personalized course and certification recommendations</p>
+					</div>
+					<div style="margin-bottom: 20px;">
+						<label for="jobTitleInput" style="display: block; margin-bottom: 10px; font-weight: 600; font-size: 16px;">
+							Job Title:
+						</label>
+						<input
+							type="text"
+							id="jobTitleInput"
+							placeholder="e.g., Software Engineer, Data Analyst, Product Manager..."
+							style="width: 100%; padding: 15px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 16px; outline: none; transition: border-color 0.3s;"
+						/>
+					</div>
+					<button id="recommendButton" class="upload-btn">🔍 Get Recommendations</button>
+					<div id="courseRecommendations" style="display: none; margin-top: 30px;"></div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			// Tab switching
+			const tabs = document.querySelectorAll('.tab');
+			const tabContents = document.querySelectorAll('.tab-content');
+
+			tabs.forEach(tab => {
+				tab.addEventListener('click', () => {
+					const targetTab = tab.dataset.tab;
+					
+					tabs.forEach(t => t.classList.remove('active'));
+					tabContents.forEach(tc => tc.classList.remove('active'));
+					
+					tab.classList.add('active');
+					document.getElementById(`${targetTab}Tab`).classList.add('active');
+				});
+			});
+
+			// Chat functionality
+			const chatContainer = document.getElementById("chatContainer");
+			const messageInput = document.getElementById("messageInput");
+			const sendButton = document.getElementById("sendButton");
+			const clearButton = document.getElementById("clearButton");
+
+			let sessionId = `session-${Date.now()}`;
+			let isLoading = false;
+
+			async function loadHistory() {
+				try {
+					const response = await fetch(`/api/history/${sessionId}`);
+					const data = await response.json();
+					if (data.messages && data.messages.length > 0) {
+						chatContainer.innerHTML = "";
+						data.messages.forEach((msg) => {
+							if (msg.role !== "system") {
+								addMessageToUI(msg.content, msg.role);
+							}
+						});
+					}
+				} catch (error) {
+					console.error("Failed to load history:", error);
+				}
+			}
+
+			function addMessageToUI(content, role) {
+				const messageDiv = document.createElement("div");
+				messageDiv.className = `message ${role}`;
+				const contentDiv = document.createElement("div");
+				contentDiv.className = "message-content";
+				contentDiv.textContent = content;
+				messageDiv.appendChild(contentDiv);
+				chatContainer.appendChild(messageDiv);
+				chatContainer.scrollTop = chatContainer.scrollHeight;
+			}
+
+			async function sendMessage() {
+				const message = messageInput.value.trim();
+				if (!message || isLoading) return;
+
+				addMessageToUI(message, "user");
+				messageInput.value = "";
+				sendButton.disabled = true;
+				isLoading = true;
+
+				const loadingDiv = document.createElement("div");
+				loadingDiv.className = "message assistant";
+				const loadingContent = document.createElement("div");
+				loadingContent.className = "message-content";
+				loadingContent.innerHTML = '<div class="loading"></div>';
+				loadingDiv.appendChild(loadingContent);
+				chatContainer.appendChild(loadingDiv);
+				chatContainer.scrollTop = chatContainer.scrollHeight;
+
+				try {
+					const response = await fetch("/api/chat", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ message, sessionId }),
+					});
+
+					const data = await response.json();
+
+					if (response.ok && data.response) {
+						chatContainer.removeChild(loadingDiv);
+						addMessageToUI(data.response, "assistant");
+					} else {
+						throw new Error(data.error || "Failed to get response");
+					}
+				} catch (error) {
+					chatContainer.removeChild(loadingDiv);
+					addMessageToUI("Sorry, I encountered an error. Please try again.", "assistant");
+					console.error("Error:", error);
+				} finally {
+					sendButton.disabled = false;
+					isLoading = false;
+					messageInput.focus();
+				}
+			}
+
+			async function clearConversation() {
+				if (!confirm("Are you sure you want to clear the conversation?")) return;
+
+				try {
+					await fetch(`/api/history/${sessionId}`, { method: "DELETE" });
+					chatContainer.innerHTML = `
+						<div class="message system">
+							<div class="message-content">
+								Welcome! I'm your AI Career Coach. I can help you with career decisions, job search strategies, professional development, and more. How can I assist you today?
+							</div>
+						</div>
+					`;
+					sessionId = `session-${Date.now()}`;
+				} catch (error) {
+					console.error("Failed to clear conversation:", error);
+				}
+			}
+
+			sendButton.addEventListener("click", sendMessage);
+			clearButton.addEventListener("click", clearConversation);
+			messageInput.addEventListener("keypress", (e) => {
+				if (e.key === "Enter" && !e.shiftKey) {
+					e.preventDefault();
+					sendMessage();
+				}
+			});
+
+			// Resume Scanner functionality
+			const uploadArea = document.getElementById("uploadArea");
+			const fileInput = document.getElementById("fileInput");
+			const resumeText = document.getElementById("resumeText");
+			const scanButton = document.getElementById("scanButton");
+			const resumeFeedback = document.getElementById("resumeFeedback");
+			const resumeContainer = document.querySelector(".resume-container");
+
+			uploadArea.addEventListener("click", () => fileInput.click());
+
+			uploadArea.addEventListener("dragover", (e) => {
+				e.preventDefault();
+				uploadArea.classList.add("dragover");
+			});
+
+			uploadArea.addEventListener("dragleave", () => {
+				uploadArea.classList.remove("dragover");
+			});
+
+			uploadArea.addEventListener("drop", (e) => {
+				e.preventDefault();
+				uploadArea.classList.remove("dragover");
+				const file = e.dataTransfer.files[0];
+				if (file) {
+					handleFile(file);
+				}
+			});
+
+			fileInput.addEventListener("change", (e) => {
+				const file = e.target.files[0];
+				if (file) {
+					handleFile(file);
+				}
+			});
+
+			async function handleFile(file) {
+				const fileName = file.name.toLowerCase();
+				const fileType = file.type.toLowerCase();
+
+				// Handle text files
+				if (fileType.includes("text") || fileName.endsWith(".txt")) {
+					const text = await file.text();
+					resumeText.value = text;
+				} 
+				// Handle PDF files
+				else if (fileType.includes("pdf") || fileName.endsWith(".pdf")) {
+					try {
+						scanButton.disabled = true;
+						scanButton.textContent = "Extracting text from PDF...";
+						
+						// Set up pdf.js worker
+						if (typeof pdfjsLib !== 'undefined') {
+							pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+						}
+
+						// Read file as ArrayBuffer
+						const arrayBuffer = await file.arrayBuffer();
+						
+						// Load PDF
+						const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+						const pdf = await loadingTask.promise;
+						
+						// Extract text from all pages
+						let fullText = "";
+						for (let i = 1; i <= pdf.numPages; i++) {
+							const page = await pdf.getPage(i);
+							const textContent = await page.getTextContent();
+							const pageText = textContent.items.map(item => item.str).join(' ');
+							fullText += pageText + '\n\n';
+						}
+						
+						resumeText.value = fullText.trim();
+						scanButton.disabled = false;
+						scanButton.textContent = "🔍 Analyze Resume";
+						
+						// Show success message
+						const successMsg = document.createElement("div");
+						successMsg.style.cssText = "background: #4caf50; color: white; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center;";
+						successMsg.textContent = `✓ Successfully extracted text from PDF (${pdf.numPages} page${pdf.numPages > 1 ? 's' : ''})`;
+						resumeContainer.insertBefore(successMsg, resumeText.parentElement);
+						setTimeout(() => successMsg.remove(), 3000);
+						
+					} catch (error) {
+						console.error("PDF parsing error:", error);
+						alert("Failed to extract text from PDF. Please try pasting the text content manually, or ensure the PDF is not password-protected.");
+						scanButton.disabled = false;
+						scanButton.textContent = "🔍 Analyze Resume";
+					}
+				} else {
+					alert("Please upload a .txt or .pdf file, or paste the text content of your resume in the text area below.");
+				}
+			}
+
+			async function scanResume() {
+				const file = fileInput.files[0];
+				const text = resumeText.value.trim();
+
+				if (!file && !text) {
+					alert("Please upload a resume file or paste your resume text.");
+					return;
+				}
+
+				scanButton.disabled = true;
+				scanButton.textContent = "Analyzing...";
+				resumeFeedback.style.display = "none";
+
+				try {
+					const formData = new FormData();
+					// If we have extracted text (from PDF or pasted), send that
+					// Otherwise send the file
+					if (text) {
+						formData.append("resumeText", text);
+					} else if (file) {
+						formData.append("resume", file);
+					}
+
+					const response = await fetch("/api/resume/scan", {
+						method: "POST",
+						body: formData,
+					});
+
+					const data = await response.json();
+
+					if (response.ok && data.feedback) {
+						// Clear previous feedback
+						resumeFeedback.innerHTML = "";
+
+						// Add ATS Score Card
+						if (data.atsScore !== undefined) {
+							const atsCard = document.createElement("div");
+							atsCard.className = "ats-score-card";
+							
+							const rankingColors = {
+								"Excellent": "#4caf50",
+								"Good": "#8bc34a",
+								"Fair": "#ff9800",
+								"Needs Improvement": "#f44336"
+							};
+							const rankingColor = rankingColors[data.atsRanking] || "#667eea";
+
+							atsCard.innerHTML = `
+								<div class="ats-score" style="color: ${rankingColor}">${data.atsScore}/100</div>
+								<div class="ats-ranking">ATS Ranking: ${data.atsRanking}</div>
+								<div class="ats-details">
+									${data.strengths && data.strengths.length > 0 ? `
+										<h4>✓ Strengths:</h4>
+										<ul>
+											${data.strengths.map(s => `<li>${s}</li>`).join("")}
+										</ul>
+									` : ""}
+									${data.improvements && data.improvements.length > 0 ? `
+										<h4 style="margin-top: 15px;">Areas for Improvement:</h4>
+										<ul>
+											${data.improvements.map(i => `<li>${i}</li>`).join("")}
+										</ul>
+									` : ""}
+									${data.keywords && (data.keywords.found || data.keywords.missing) ? `
+										<div class="keywords-section" style="margin-top: 15px;">
+											${data.keywords.found && data.keywords.found.length > 0 ? `
+												<div class="keywords-found">
+													<h4>Found Keywords (${data.keywords.found.length}):</h4>
+													<ul>
+														${data.keywords.found.slice(0, 5).map(k => `<li>${k}</li>`).join("")}
+													</ul>
+												</div>
+											` : ""}
+											${data.keywords.missing && data.keywords.missing.length > 0 ? `
+												<div class="keywords-missing">
+													<h4>Missing Keywords:</h4>
+													<ul>
+														${data.keywords.missing.slice(0, 5).map(k => `<li>${k}</li>`).join("")}
+													</ul>
+												</div>
+											` : ""}
+										</div>
+									` : ""}
+								</div>
+							`;
+							resumeFeedback.appendChild(atsCard);
+						}
+
+						// Add AI Feedback
+						const feedbackDiv = document.createElement("div");
+						feedbackDiv.className = "resume-feedback";
+						feedbackDiv.style.marginTop = "20px";
+						feedbackDiv.textContent = data.feedback;
+						resumeFeedback.appendChild(feedbackDiv);
+
+						// Add Export Button
+						const exportBtn = document.createElement("button");
+						exportBtn.className = "upload-btn export-btn";
+						exportBtn.textContent = "📥 Export as PDF";
+						exportBtn.onclick = () => exportResumeFeedback(data);
+						resumeFeedback.appendChild(exportBtn);
+
+						// Store data for export
+						resumeFeedback.dataset.exportData = JSON.stringify(data);
+
+						resumeFeedback.style.display = "block";
+						resumeFeedback.scrollIntoView({ behavior: "smooth", block: "nearest" });
+					} else {
+						alert(data.error || "Failed to analyze resume. " + (data.suggestion || ""));
+					}
+				} catch (error) {
+					alert("An error occurred while analyzing your resume. Please try again.");
+					console.error("Error:", error);
+				} finally {
+					scanButton.disabled = false;
+					scanButton.textContent = "🔍 Analyze Resume";
+				}
+			}
+
+			scanButton.addEventListener("click", scanResume);
+
+			// Course Recommendations functionality
+			const jobTitleInput = document.getElementById("jobTitleInput");
+			const recommendButton = document.getElementById("recommendButton");
+			const courseRecommendations = document.getElementById("courseRecommendations");
+
+			async function getRecommendations() {
+				const jobTitle = jobTitleInput.value.trim();
+
+				if (!jobTitle || jobTitle.length < 2) {
+					alert("Please enter a valid job title (at least 2 characters).");
+					return;
+				}
+
+				recommendButton.disabled = true;
+				recommendButton.textContent = "Generating Recommendations...";
+				courseRecommendations.style.display = "none";
+
+				try {
+					const response = await fetch("/api/courses/recommend", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							jobTitle,
+							sessionId: `course-session-${Date.now()}`,
+						}),
+					});
+
+					const data = await response.json();
+
+					if (response.ok && data.recommendations) {
+						courseRecommendations.innerHTML = `
+							<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+								<h3 style="margin-bottom: 10px;">📋 Recommendations for: ${data.jobTitle}</h3>
+							</div>
+							<div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); white-space: pre-wrap; line-height: 1.8; font-size: 15px;">
+								${data.recommendations.replace(/\n/g, '<br>')}
+							</div>
+						`;
+						
+						// Add Export Button
+						const exportBtn = document.createElement("button");
+						exportBtn.className = "upload-btn export-btn";
+						exportBtn.textContent = "📥 Export as PDF";
+						exportBtn.onclick = () => exportCourseRecommendations(data);
+						courseRecommendations.appendChild(exportBtn);
+
+						// Store data for export
+						courseRecommendations.dataset.exportData = JSON.stringify(data);
+
+						courseRecommendations.style.display = "block";
+						courseRecommendations.scrollIntoView({ behavior: "smooth", block: "nearest" });
+					} else {
+						alert(data.error || "Failed to generate recommendations. Please try again.");
+					}
+				} catch (error) {
+					alert("An error occurred while generating recommendations. Please try again.");
+					console.error("Error:", error);
+				} finally {
+					recommendButton.disabled = false;
+					recommendButton.textContent = "🔍 Get Recommendations";
+				}
+			}
+
+			recommendButton.addEventListener("click", getRecommendations);
+			jobTitleInput.addEventListener("keypress", (e) => {
+				if (e.key === "Enter") {
+					e.preventDefault();
+					getRecommendations();
+				}
+			});
+
+			// PDF Export Functions
+			function exportResumeFeedback(data) {
+				if (typeof window.jspdf === 'undefined') {
+					alert("PDF library not loaded. Please refresh the page and try again.");
+					return;
+				}
+
+				const { jsPDF } = window.jspdf;
+				const doc = new jsPDF();
+				let yPos = 20;
+
+				// Title
+				doc.setFontSize(20);
+				doc.setTextColor(102, 126, 234);
+				doc.text("Resume Analysis Report", 105, yPos, { align: 'center' });
+				yPos += 15;
+
+				// ATS Score Section
+				if (data.atsScore !== undefined) {
+					doc.setFontSize(16);
+					doc.setTextColor(0, 0, 0);
+					doc.text("ATS Score & Ranking", 20, yPos);
+					yPos += 10;
+
+					doc.setFontSize(24);
+					doc.setTextColor(102, 126, 234);
+					doc.text(`${data.atsScore}/100`, 20, yPos);
+					yPos += 8;
+
+					doc.setFontSize(14);
+					doc.setTextColor(0, 0, 0);
+					doc.text(`Ranking: ${data.atsRanking}`, 20, yPos);
+					yPos += 15;
+				}
+
+				// Strengths
+				if (data.strengths && data.strengths.length > 0) {
+					doc.setFontSize(14);
+					doc.setTextColor(76, 175, 80);
+					doc.text("Strengths:", 20, yPos);
+					yPos += 8;
+					doc.setFontSize(11);
+					doc.setTextColor(0, 0, 0);
+					data.strengths.forEach(strength => {
+						if (yPos > 270) {
+							doc.addPage();
+							yPos = 20;
+						}
+						doc.text(`• ${strength}`, 25, yPos);
+						yPos += 7;
+					});
+					yPos += 5;
+				}
+
+				// Areas for Improvement
+				if (data.improvements && data.improvements.length > 0) {
+					if (yPos > 270) {
+						doc.addPage();
+						yPos = 20;
+					}
+					doc.setFontSize(14);
+					doc.setTextColor(255, 107, 107);
+					doc.text("Areas for Improvement:", 20, yPos);
+					yPos += 8;
+					doc.setFontSize(11);
+					doc.setTextColor(0, 0, 0);
+					data.improvements.forEach(improvement => {
+						if (yPos > 270) {
+							doc.addPage();
+							yPos = 20;
+						}
+						doc.text(`• ${improvement}`, 25, yPos);
+						yPos += 7;
+					});
+					yPos += 5;
+				}
+
+				// Keywords
+				if (data.keywords) {
+					if (yPos > 250) {
+						doc.addPage();
+						yPos = 20;
+					}
+					doc.setFontSize(12);
+					doc.setTextColor(0, 0, 0);
+					if (data.keywords.found && data.keywords.found.length > 0) {
+						doc.text(`Found Keywords (${data.keywords.found.length}): ${data.keywords.found.slice(0, 10).join(", ")}`, 20, yPos);
+						yPos += 8;
+					}
+					if (data.keywords.missing && data.keywords.missing.length > 0) {
+						doc.text(`Missing Keywords: ${data.keywords.missing.slice(0, 10).join(", ")}`, 20, yPos);
+						yPos += 10;
+					}
+				}
+
+				// AI Feedback
+				if (data.feedback) {
+					if (yPos > 250) {
+						doc.addPage();
+						yPos = 20;
+					}
+					doc.setFontSize(14);
+					doc.setTextColor(102, 126, 234);
+					doc.text("Detailed Feedback:", 20, yPos);
+					yPos += 10;
+
+					doc.setFontSize(11);
+					doc.setTextColor(0, 0, 0);
+					const feedbackLines = doc.splitTextToSize(data.feedback, 170);
+					feedbackLines.forEach(line => {
+						if (yPos > 270) {
+							doc.addPage();
+							yPos = 20;
+						}
+						doc.text(line, 20, yPos);
+						yPos += 7;
+					});
+				}
+
+				// Footer
+				const pageCount = doc.internal.pages.length - 1;
+				for (let i = 1; i <= pageCount; i++) {
+					doc.setPage(i);
+					doc.setFontSize(8);
+					doc.setTextColor(128, 128, 128);
+					doc.text(`Generated by AI Career Coach - Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
+				}
+
+				// Save PDF
+				const fileName = `Resume_Analysis_${new Date().toISOString().split('T')[0]}.pdf`;
+				doc.save(fileName);
+			}
+
+			function exportCourseRecommendations(data) {
+				if (typeof window.jspdf === 'undefined') {
+					alert("PDF library not loaded. Please refresh the page and try again.");
+					return;
+				}
+
+				const { jsPDF } = window.jspdf;
+				const doc = new jsPDF();
+				let yPos = 20;
+
+				// Title
+				doc.setFontSize(20);
+				doc.setTextColor(102, 126, 234);
+				doc.text("Course & Certification Recommendations", 105, yPos, { align: 'center' });
+				yPos += 10;
+
+				doc.setFontSize(14);
+				doc.setTextColor(0, 0, 0);
+				doc.text(`Job Title: ${data.jobTitle}`, 105, yPos, { align: 'center' });
+				yPos += 15;
+
+				// Courses Section
+				if (data.courses && data.courses.length > 0) {
+					doc.setFontSize(16);
+					doc.setTextColor(102, 126, 234);
+					doc.text("Recommended Courses", 20, yPos);
+					yPos += 10;
+
+					doc.setFontSize(11);
+					doc.setTextColor(0, 0, 0);
+					data.courses.forEach((course, index) => {
+						if (yPos > 270) {
+							doc.addPage();
+							yPos = 20;
+						}
+						doc.setFontSize(12);
+						doc.setTextColor(102, 126, 234);
+						doc.text(`${index + 1}. ${course.name}`, 20, yPos);
+						yPos += 7;
+
+						doc.setFontSize(10);
+						doc.setTextColor(0, 0, 0);
+						if (course.provider) {
+							doc.text(`   Provider: ${course.provider}`, 25, yPos);
+							yPos += 6;
+						}
+						if (course.description) {
+							const descLines = doc.splitTextToSize(`   ${course.description}`, 165);
+							descLines.forEach(line => {
+								if (yPos > 270) {
+									doc.addPage();
+									yPos = 20;
+								}
+								doc.text(line, 25, yPos);
+								yPos += 6;
+							});
+						}
+						yPos += 5;
+					});
+					yPos += 5;
+				}
+
+				// Certifications Section
+				if (data.certifications && data.certifications.length > 0) {
+					if (yPos > 250) {
+						doc.addPage();
+						yPos = 20;
+					}
+					doc.setFontSize(16);
+					doc.setTextColor(102, 126, 234);
+					doc.text("Recommended Certifications", 20, yPos);
+					yPos += 10;
+
+					doc.setFontSize(11);
+					doc.setTextColor(0, 0, 0);
+					data.certifications.forEach((cert, index) => {
+						if (yPos > 270) {
+							doc.addPage();
+							yPos = 20;
+						}
+						doc.setFontSize(12);
+						doc.setTextColor(102, 126, 234);
+						doc.text(`${index + 1}. ${cert.name}`, 20, yPos);
+						yPos += 7;
+
+						doc.setFontSize(10);
+						doc.setTextColor(0, 0, 0);
+						if (cert.issuer) {
+							doc.text(`   Issuer: ${cert.issuer}`, 25, yPos);
+							yPos += 6;
+						}
+						if (cert.description) {
+							const descLines = doc.splitTextToSize(`   ${cert.description}`, 165);
+							descLines.forEach(line => {
+								if (yPos > 270) {
+									doc.addPage();
+									yPos = 20;
+								}
+								doc.text(line, 25, yPos);
+								yPos += 6;
+							});
+						}
+						yPos += 5;
+					});
+					yPos += 5;
+				}
+
+				// AI Recommendations
+				if (data.recommendations) {
+					if (yPos > 250) {
+						doc.addPage();
+						yPos = 20;
+					}
+					doc.setFontSize(16);
+					doc.setTextColor(102, 126, 234);
+					doc.text("Detailed Recommendations", 20, yPos);
+					yPos += 10;
+
+					doc.setFontSize(11);
+					doc.setTextColor(0, 0, 0);
+					const recLines = doc.splitTextToSize(data.recommendations, 170);
+					recLines.forEach(line => {
+						if (yPos > 270) {
+							doc.addPage();
+							yPos = 20;
+						}
+						doc.text(line, 20, yPos);
+						yPos += 7;
+					});
+				}
+
+				// Footer
+				const pageCount = doc.internal.pages.length - 1;
+				for (let i = 1; i <= pageCount; i++) {
+					doc.setPage(i);
+					doc.setFontSize(8);
+					doc.setTextColor(128, 128, 128);
+					doc.text(`Generated by AI Career Coach - Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
+				}
+
+				// Save PDF
+				const fileName = `Course_Recommendations_${data.jobTitle.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+				doc.save(fileName);
+			}
+
+			// Make export functions globally available
+			window.exportResumeFeedback = exportResumeFeedback;
+			window.exportCourseRecommendations = exportCourseRecommendations;
+
+			// Load history on page load
+			loadHistory();
+		</script>
+	</body>
+</html>
